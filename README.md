@@ -1,7 +1,7 @@
 # ceph_on_PI_for_fun
-##CEPH Hammer on Raspberry Pi B2
+## CEPH Hammer on Raspberry Pi B2
 
-### Create the SanDisk 32G microSD cards - load raspbian images on them using MAC
+###### Create the SanDisk 32G microSD cards - load raspbian images on them using MAC
 ```
 # diskutil list
 /dev/disk3
@@ -98,17 +98,17 @@ Move the dhcpd init file out of /etc/init.d:
 # reboot
 ```
 
-###Kernel Tuning:
+###### Kernel Tuning:
 ```
 vm.swappiness=1
 vm.min_free_kbytes = 32768
 kernel.pid_max = 32768
 ```
-###Install some software utilities:
+###### Install some software utilities:
 ```
 # aptitude -y install screen htop iotop btrfs-tools lsb-release gdisk
 ```
-###Add CEPH and Raspbian testing Repos and install binaries:
+###### Add CEPH and Raspbian testing Repos and install binaries:
 Add CEPH repo KEY:
 ```
 # curl -O "https://git.ceph.com/?p=ceph.git;a=blob_plain;f=keys/release.asc"
@@ -131,15 +131,15 @@ deb http://mirrordirector.raspbian.org/raspbian/ testing main contrib non-free r
 # Uncomment line below then 'apt-get update' to enable 'apt-get source'
 #deb-src http://archive.raspbian.org/raspbian/ wheezy main contrib non-free rpi
 ```
-###Update repos
+###### Update repos
 ```
 # apt-get update
 ```
-###Install CEPH packages:
+###### Install CEPH packages:
 ```
 # apt-get -y install ceph
 ```
-###Check Packages:
+###### Check Packages:
 ```
 # dpkg --list |grep ceph
 ii  ceph                                  0.94.3-1                                armhf        distributed storage and file system
@@ -152,7 +152,7 @@ ceph version 0.94.3 (95cefea9fd9ab740263bf8bb4796fd864d9afe2b)
 
 0.94.3 is the latest Hammer release for CEPH
 ```
-###Create “ceph.conf” configuration file:
+###### Create “ceph.conf” configuration file:
 ```
 [global]
 fsid = 8e784fd8-a016-411d-bbe8-e2337222e935
@@ -260,11 +260,11 @@ monmaptool: monmap file /tmp/monmap
 monmaptool: set fsid to 8e784fd8-a016-411d-bbe8-e2337222e935
 monmaptool: writing epoch 0 to /tmp/monmap (3 monitors)
 ```
-###Create a default data directory on all the monitor hosts:
+###### Create a default data directory on all the monitor hosts:
 ```
 # mkdir /var/lib/ceph/mon/ceph-cephnode(1,2,3)
 ```
-###Populate the monitor daemon(s) with the monitor map and keyring (copy the keyring files to all 3 monitor nodes before running command on the node):
+###### Populate the monitor daemon(s) with the monitor map and keyring (copy the keyring files to all 3 monitor nodes before running command on the node):
 
 Generate the correct monmap one more time using the /etc/ceph/ceph.conf file:
 ```
@@ -285,11 +285,11 @@ ceph-mon: created monfs at /var/lib/ceph/mon/ceph-cephnode1 for mon.1
 
 This will create a keyring file and a folder called “store.db” in /var/lib/ceph/mon/ceph-{nodename} folder.
 
-###Mark that the monitor is created and ready to be started (on all three hosts):
+###### Mark that the monitor is created and ready to be started (on all three hosts):
 ```
 # touch /var/lib/ceph/mon/ceph-cephnode<1,2,3>/done
 ```
-###Start the monitor processes on all 3 nodes:
+###### Start the monitor processes on all 3 nodes:
 ```
 # /etc/init.d/ceph start mon.[1,2,3]
 
@@ -297,7 +297,7 @@ This will create a keyring file and a folder called “store.db” in /var/lib/c
 # /etc/init.d/ceph start mon.2
 # /etc/init.d/ceph start mon.3
 ```
-###Run Gather keys on one node to check (not required as we already created admin keys):
+###### Run Gather keys on one node to check (not required as we already created admin keys):
 ```
 # /usr/sbin/ceph-create-keys --cluster ceph -i 1
 INFO:ceph-create-keys:Key exists already: /etc/ceph/ceph.client.admin.keyring
@@ -305,7 +305,7 @@ INFO:ceph-create-keys:Talking to monitor...
 INFO:ceph-create-keys:Talking to monitor...
 INFO:ceph-create-keys:Talking to monitor...
 ```
-###Other commands to check monitor:
+###### Other commands to check monitor:
 ```
 # ceph auth list
 installed auth entries:
@@ -350,7 +350,7 @@ created 2015-10-09 02:50:20.086273
                   64 creating
                   
 ```
-###Now we will create the 3 OSDs using the 128GB USB stick in each Raspberry Pi:
+###### Now we will create the 3 OSDs using the 128GB USB stick in each Raspberry Pi:
 ```
 # ceph-disk-prepare --zap-disk /dev/sda
 
@@ -421,7 +421,7 @@ The specified file does not exist!
  /dev/sda1 ceph data, prepared, cluster ceph, osd.0, journal /dev/sda2
  /dev/sda2 ceph journal, for /dev/sda1
 ```
-###Create the OSD on each node:
+###### Create the OSD on each node:
 ```
 # ceph osd tree
 ID WEIGHT TYPE NAME          UP/DOWN REWEIGHT PRIMARY-AFFINITY 
@@ -461,7 +461,7 @@ lrwxrwxrwx 1 root root 58 Oct  9 04:26 journal -> /dev/disk/by-partuuid/6ad1a703
 -rw-r--r-- 1 root root 21 Oct  9 04:26 magic
 -rw-r--r-- 1 root root 37 Oct  9 04:26 journal_uuid
 ```
-###Create the Key
+###### Create the Key
 ```
 # ceph auth get-or-create osd.1 mon 'allow rwx' osd 'allow *' -o /var/lib/ceph/osd/ceph-1/keyring
 
@@ -624,9 +624,7 @@ ID WEIGHT  TYPE NAME          UP/DOWN REWEIGHT PRIMARY-AFFINITY
  1 0.10999         osd.1           up  1.00000          1.00000 
 ```
 
-
-
-###Fix the CRUSH map (if required):
+###### Fix the CRUSH map (if required):
 ```
 # ceph -s
     cluster 8e784fd8-a016-411d-bbe8-e2337222e935
