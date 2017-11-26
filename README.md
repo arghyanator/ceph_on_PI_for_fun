@@ -814,22 +814,26 @@ rule replicated_ruleset {
 
 # end crush map
 ```
-The fixed section in GREEN
+The fixed section in GREEN (without the '+').
 
-Compile the new CRUSH map:
+__Compile the new CRUSH map:__
+```
 # crushtool -c /tmp/crush.txt -o /tmp/new_crush.map
-
+```
 Test the new compiled CRUSH map and make sure it fixed the PGs:
+```
 # crushtool -i /tmp/new_crush.map --test --output-csv
+```
 Check the output CSV files in current folder (folder from where crushtool was run) and make sure there were no “errors” reported.
 
-Now we load the new compiled MAP into the ceph cluster.:
+__Now we load the new compiled MAP into the ceph cluster:__
 If no errors reported in CSV file - then we will load the crush map into the cluster:
-
+```
 # ceph osd setcrushmap -i /tmp/new_crush.map 
 set crush map
-
-Now “watch” the cluster get fixed:
+```
+__Now “watch” the cluster get fixed:__
+```
 2015-10-12 01:15:36.429315 mon.0 [INF] HEALTH_WARN; 128 pgs degraded; 128 pgs stuck degraded; 128 pgs stuck unclean; 128 pgs stuck undersized; 128 pgs undersized; recovery 66/198 objects degraded (33.333%)
 2015-10-12 01:31:49.980976 mon.1 [INF] from='client.? 192.168.0.201:0/1008795' entity='client.admin' cmd=[{"prefix": "osd setcrushmap"}]: dispatch
 2015-10-12 01:31:49.992538 mon.0 [INF] from='client.74197 :/0' entity='client.admin' cmd=[{"prefix": "osd setcrushmap"}]: dispatch
@@ -871,9 +875,9 @@ Now “watch” the cluster get fixed:
 2015-10-12 01:32:17.586963 osd.0 [INF] 9.e scrub starts
 2015-10-12 01:32:17.593028 osd.0 [INF] 9.e scrub ok
 2015
-
+```
 AND VOILA...the error % starts going down...and slowly we get HEALTH_OK!!!
-
+```
 # ceph -s
     cluster 8e784fd8-a016-411d-bbe8-e2337222e935
      health HEALTH_OK
@@ -883,10 +887,10 @@ AND VOILA...the error % starts going down...and slowly we get HEALTH_OK!!!
       pgmap v462: 128 pgs, 4 pools, 264 MB data, 66 objects
             902 MB used, 340 GB / 344 GB avail
                  128 active+clean
-
-Run a RADOS bench “benchmark” test (to check the speed...not really...its just to make sure everything works):
-
-rados bench -p cinder 50 -t 64 write
+```
+###### Run a RADOS bench “benchmark” test (to check the speed...not really...its just to make sure everything works):
+```
+# rados bench -p cinder 50 -t 64 write
  Maintaining 64 concurrent writes of 4194304 bytes for up to 50 seconds or 0 objects
  Object prefix: benchmark_data_cephnode1_9504
    sec Cur ops   started  finished  avg MB/s  cur MB/s  last lat   avg lat
@@ -977,4 +981,4 @@ Average Latency:        28.433
 Stddev Latency:         6.30008
 Max latency:            39.8838
 Min latency:            19.1789
-
+```
