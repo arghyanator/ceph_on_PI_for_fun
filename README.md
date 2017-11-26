@@ -21,7 +21,7 @@ Password:
 ```
 The Wheezy Image of Raspbian can be downloaded from - https://downloads.raspberrypi.org/raspbian/images/raspbian-2015-05-07/2015-05-05-raspbian-wheezy.zip.
 
-###Pre-setup of the Raspberry PIs once bootable image is ready:
+###### Pre-setup of the Raspberry PIs once bootable image is ready:
 We need at least 3 Raspberry Pi computers to run CEPH cluster (Monitor + OSD). I used 32G SanDisk microSD card for the Operating system and a 12GB USB stick for the OSD drives.
 
 Once the microSD card is ready with the bootable raspbian image - boot the Raspberry PIs and perform following options using the “raspi-config” utility:
