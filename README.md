@@ -26,10 +26,10 @@ We need at least 3 Raspberry Pi computers to run CEPH cluster (Monitor + OSD). I
 
 Once the microSD card is ready with the bootable raspbian image - boot the Raspberry PIs and perform following options using the “raspi-config” utility:
 
-Markup : * Change Default password for “pi” user.
-        * Change hostname (I used cephnode1, cephnode2, cephnode3 as hostnames). 
-        * Overclock to 1000Mhz for PI2
-        * Enable SSH from the advanced options
+ * Change Default password for “pi” user.
+ * Change hostname (I used cephnode1, cephnode2, cephnode3 as hostnames). 
+ * Overclock to 1000Mhz for PI2
+ * Enable SSH from the advanced options
 
 
 Next we will disable DHCP and use Static IPs on the wired Ethernet port:
@@ -80,7 +80,7 @@ iface wlan1 inet manual
 wpa-conf /etc/wpa_supplicant/wpa_supplicant.conf
 ```
 Uninstall DHCP packages:
-
+```
 # aptitude -y purge dhcp3-client dhcp3-common isc-dhcp-client isc-dhcp-common
 The following packages will be REMOVED:  
   isc-dhcp-client{p} isc-dhcp-common{p} 
@@ -91,53 +91,56 @@ Removing isc-dhcp-client ...
 Purging configuration files for isc-dhcp-client ...
 Removing isc-dhcp-common ...
 Processing triggers for man-db ...
-
+```
 Move the dhcpd init file out of /etc/init.d:
-
+```
 # mv /etc/init.d/dhcpcd /root
 # reboot
+```
 
-
-Kernel Tuning:
+###Kernel Tuning:
+```
 vm.swappiness=1
 vm.min_free_kbytes = 32768
 kernel.pid_max = 32768
-
-Install some software utilities:
+```
+###Install some software utilities:
+```
 # aptitude -y install screen htop iotop btrfs-tools lsb-release gdisk
-
-Add CEPH and Raspbian testing Repos and install binaries:
+```
+###Add CEPH and Raspbian testing Repos and install binaries:
 Add CEPH repo KEY:
-
+```
 # curl -O "https://git.ceph.com/?p=ceph.git;a=blob_plain;f=keys/release.asc"
   % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
                                  Dload  Upload   Total   Spent    Left  Speed
 100  1645  100  1645    0     0    463      0  0:00:03  0:00:03 --:--:--   472
 # apt-key add release.asc 
 OK
+```
 Add CEPH Repo:
-
-echo deb http://ceph.com/debian-hammer/ $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/ceph.list
-
+```
+# echo deb http://ceph.com/debian-hammer/ $(lsb_release -sc) main | sudo tee /etc/apt/sources.list.d/ceph.list
+```
 Change Raspbian repo to Testing from wheezy:
-
+```
 /etc/apt/sources.list
 
 deb http://mirrordirector.raspbian.org/raspbian/ testing main contrib non-free rpi
 # deb http://mirrordirector.raspbian.org/raspbian/ wheezy main contrib non-free rpi
 # Uncomment line below then 'apt-get update' to enable 'apt-get source'
 #deb-src http://archive.raspbian.org/raspbian/ wheezy main contrib non-free rpi
-
-Update repos
-
+```
+###Update repos
+```
 # apt-get update
-
-Install CEPH packages:
-
+```
+###Install CEPH packages:
+```
 # apt-get -y install ceph
-
-Check Packages:
-
+```
+###Check Packages:
+```
 # dpkg --list |grep ceph
 ii  ceph                                  0.94.3-1                                armhf        distributed storage and file system
 ii  ceph-common                           0.94.3-1                                armhf        common utilities to mount and interact with a ceph storage cluster
@@ -148,9 +151,9 @@ ii  python-cephfs                         0.94.3-1                              
 ceph version 0.94.3 (95cefea9fd9ab740263bf8bb4796fd864d9afe2b)
 
 0.94.3 is the latest Hammer release for CEPH
-
-Create “ceph.conf” configuration file:
-
+```
+###Create “ceph.conf” configuration file:
+```
 [global]
 fsid = 8e784fd8-a016-411d-bbe8-e2337222e935
 public network = 192.168.0.0/24
@@ -215,34 +218,38 @@ mon data = /var/lib/ceph/mon/ceph-cephnode3
   # Optimize Filestore Merge and Split
   filestore merge threshold = 40
   filestore split multiple = 8
-
-
+```
 
 
 Copy the /etc/ceph/ceph.conf file to all 3 nodes. We are going to run monitor and OSD on all 3 Raspberry Pi nodes.
 
-Next few steps are required on one node only.
+__Next few steps are required on one node only.__
 Create cluster keyring and monitor secret key:
+```
 # ceph-authtool --create-keyring /tmp/ceph.mon.keyring --gen-key -n mon. --cap mon 'allow *'
 creating /tmp/ceph.mon.keyring
+```
 Generate administrator keyring, create client.admin user and add the user to admin keyring:
+```
 # ceph-authtool --create-keyring /etc/ceph/ceph.client.admin.keyring --gen-key -n client.admin --set-uid=0 --cap mon 'allow *' --cap osd 'allow *' --cap mds 'allow'
 creating /etc/ceph/ceph.client.admin.keyring
+```
 Add the client.admin key to the ceph.mon.keyring
+```
 # ceph-authtool /tmp/ceph.mon.keyring --import-keyring /etc/ceph/ceph.client.admin.keyring
 
 importing contents of /etc/ceph/ceph.client.admin.keyring into /tmp/ceph.mon.keyring
-
+```
 
 Generate a monitor map using the hostname(s), host IP address(es) and the FSID. Save it as /tmp/monmap:
-
+```
 # monmaptool --create --add cephnode1 192.168.0.201 --fsid 8e784fd8-a016-411d-bbe8-e2337222e935 /tmp/monmap
 monmaptool: monmap file /tmp/monmap
 monmaptool: set fsid to 8e784fd8-a016-411d-bbe8-e2337222e935
 monmaptool: writing epoch 0 to /tmp/monmap (1 monitors)
-
+```
 Add the remaining two monitors to the map as well:
-
+```
 # monmaptool --add cephnode2 192.168.0.202 --fsid 8e784fd8-a016-411d-bbe8-e2337222e935 /tmp/monmap
 monmaptool: monmap file /tmp/monmap
 monmaptool: set fsid to 8e784fd8-a016-411d-bbe8-e2337222e935
@@ -252,13 +259,15 @@ monmaptool: writing epoch 0 to /tmp/monmap (2 monitors)
 monmaptool: monmap file /tmp/monmap
 monmaptool: set fsid to 8e784fd8-a016-411d-bbe8-e2337222e935
 monmaptool: writing epoch 0 to /tmp/monmap (3 monitors)
-
-Create a default data directory on all the monitor hosts:
+```
+###Create a default data directory on all the monitor hosts:
+```
 # mkdir /var/lib/ceph/mon/ceph-cephnode(1,2,3)
-
-Populate the monitor daemon(s) with the monitor map and keyring (copy the keyring files to all 3 monitor nodes before running command on the node):
+```
+###Populate the monitor daemon(s) with the monitor map and keyring (copy the keyring files to all 3 monitor nodes before running command on the node):
 
 Generate the correct monmap one more time using the /etc/ceph/ceph.conf file:
+```
 # monmaptool  --create --generate -c /etc/ceph/ceph.conf /tmp/monmap.right
 
 # ceph-mon --mkfs -i 3 --monmap /tmp/monmap.right --keyring /tmp/ceph.mon.keyring
@@ -272,30 +281,32 @@ ceph-mon: created monfs at /var/lib/ceph/mon/ceph-cephnode2 for mon.2
 # ceph-mon --mkfs -i 1 --monmap /tmp/monmap.right --keyring /tmp/ceph.mon.keyring
 ceph-mon: set fsid to 8e784fd8-a016-411d-bbe8-e2337222e935
 ceph-mon: created monfs at /var/lib/ceph/mon/ceph-cephnode1 for mon.1
-
+```
 
 This will create a keyring file and a folder called “store.db” in /var/lib/ceph/mon/ceph-{nodename} folder.
 
-Mark that the monitor is created and ready to be started (on all three hosts):
+###Mark that the monitor is created and ready to be started (on all three hosts):
+```
 # touch /var/lib/ceph/mon/ceph-cephnode<1,2,3>/done
-
-Start the monitor processes on all 3 nodes:
-
+```
+###Start the monitor processes on all 3 nodes:
+```
 # /etc/init.d/ceph start mon.[1,2,3]
 
 # /etc/init.d/ceph start mon.1
 # /etc/init.d/ceph start mon.2
 # /etc/init.d/ceph start mon.3
-Run Gather keys on one node to check (not required as we already created admin keys):
-
+```
+###Run Gather keys on one node to check (not required as we already created admin keys):
+```
 # /usr/sbin/ceph-create-keys --cluster ceph -i 1
 INFO:ceph-create-keys:Key exists already: /etc/ceph/ceph.client.admin.keyring
 INFO:ceph-create-keys:Talking to monitor...
 INFO:ceph-create-keys:Talking to monitor...
 INFO:ceph-create-keys:Talking to monitor...
-
-Other commands to check monitor:
-
+```
+###Other commands to check monitor:
+```
 # ceph auth list
 installed auth entries:
 
@@ -337,8 +348,10 @@ created 2015-10-09 02:50:20.086273
       pgmap v2: 64 pgs, 1 pools, 0 bytes data, 0 objects
             0 kB used, 0 kB / 0 kB avail
                   64 creating
-Now we will create the 3 OSDs using the 128GB USB stick in each Raspberry Pi:
-
+                  
+```
+###Now we will create the 3 OSDs using the 128GB USB stick in each Raspberry Pi:
+```
 # ceph-disk-prepare --zap-disk /dev/sda
 
 ***************************************************************
@@ -382,10 +395,10 @@ The specified file does not exist!
 /dev/sda :
  /dev/sda1 ceph data, prepared, cluster ceph, journal /dev/sda2
  /dev/sda2 ceph journal, for /dev/sda1
-
+```
 
 As seen above ceph-disk-prepare has created two partitions - one for data and one for OSD journal.
-
+```
 # mkdir /var/lib/ceph/osd/ceph-0
 # mount /dev/sda1 /var/lib/ceph/osd/ceph-0
 # ceph osd create
@@ -407,9 +420,9 @@ The specified file does not exist!
 /dev/sda :
  /dev/sda1 ceph data, prepared, cluster ceph, osd.0, journal /dev/sda2
  /dev/sda2 ceph journal, for /dev/sda1
-
-Create the OSD on each node:
-
+```
+###Create the OSD on each node:
+```
 # ceph osd tree
 ID WEIGHT TYPE NAME          UP/DOWN REWEIGHT PRIMARY-AFFINITY 
 -1      0 root default                                         
@@ -427,9 +440,9 @@ Scanning for Btrfs filesystems
 create-or-move updating item name 'osd.0' weight 0.11 at location {host=cephnode1,root=default} to crush map
 Starting Ceph osd.0 on cephnode1...
 starting osd.0 at :/0 osd_data /var/lib/ceph/osd/ceph-0 /var/lib/ceph/osd/ceph-0/journal
-
-Node 2:
-
+```
+__Node 2:__
+```
 # mkdir /var/lib/ceph/osd/ceph-1
 
 # mount /dev/sda1 /var/lib/ceph/osd/ceph-1
@@ -447,9 +460,9 @@ lrwxrwxrwx 1 root root 58 Oct  9 04:26 journal -> /dev/disk/by-partuuid/6ad1a703
 -rw-r--r-- 1 root root 37 Oct  9 04:26 fsid
 -rw-r--r-- 1 root root 21 Oct  9 04:26 magic
 -rw-r--r-- 1 root root 37 Oct  9 04:26 journal_uuid
-
-Create the Key
-
+```
+###Create the Key
+```
 # ceph auth get-or-create osd.1 mon 'allow rwx' osd 'allow *' -o /var/lib/ceph/osd/ceph-1/keyring
 
 # ls -ltr /var/lib/ceph/osd/ceph-1/
@@ -467,9 +480,9 @@ ID WEIGHT  TYPE NAME          UP/DOWN REWEIGHT PRIMARY-AFFINITY
 -1 0.10999 root default                                         
 -2 0.10999     host cephnode1                                   
  0 0.10999         osd.0           up  1.00000          1.00000 
-
+```
 Create the OSD:
-
+```
 # ceph osd create
 1
 
@@ -479,9 +492,9 @@ ID WEIGHT  TYPE NAME          UP/DOWN REWEIGHT PRIMARY-AFFINITY
 -2 0.10999     host cephnode1                                   
  0 0.10999         osd.0           up  1.00000          1.00000 
  1       0 osd.1                 down        0          1.00000 
-
+```
 Start the OSD:
-
+```
 # /etc/init.d/ceph start osd.1
 === osd.1 === 
 Mounting Btrfs on cephnode2:/var/lib/ceph/osd/ceph-1
@@ -499,9 +512,9 @@ ID WEIGHT  TYPE NAME          UP/DOWN REWEIGHT PRIMARY-AFFINITY
  0 0.10999         osd.0           up  1.00000          1.00000 
 -3 0.10999     host cephnode2                                   
  1 0.10999         osd.1           up  1.00000          1.00000 
-
-Node3:
-
+```
+__Node3:__
+```
 # mkdir /var/lib/ceph/osd/ceph-2
 
 # mount /dev/sda1 /var/lib/ceph/osd/ceph-2/
@@ -609,11 +622,12 @@ ID WEIGHT  TYPE NAME          UP/DOWN REWEIGHT PRIMARY-AFFINITY
  0 0.10999         osd.0           up  1.00000          1.00000 
 -3 0.10999     host cephnode2                                   
  1 0.10999         osd.1           up  1.00000          1.00000 
+```
 
 
 
-
-Fix the CRUSH map (if required):
+###Fix the CRUSH map (if required):
+```
 # ceph -s
     cluster 8e784fd8-a016-411d-bbe8-e2337222e935
      health HEALTH_WARN
@@ -630,28 +644,28 @@ Fix the CRUSH map (if required):
             634 MB used, 340 GB / 344 GB avail
             66/198 objects degraded (33.333%)
                  128 active+undersized+degraded
-
+```
 
 The cluster stays in “stale+undersized+degraded+peered” state forever. This means there is something wrong with the cluster “CRUSH” map and needs to be fixed.
 
-CRUSHTOOL:
+__CRUSHTOOL:__
 Get the current “CRUSH” Map:
-
+```
 # ceph osd getcrushmap -o /tmp/crush.map 
 got crush map from osdmap epoch 133
-
+```
 This dumps a “binary” crush map in the output file location specified in /tmp. We need to make it ‘human readable’ or convert to text.
 
 Get Text format (decompile):
-
+```
 # crushtool -d /tmp/crush.map >/tmp/crush.txt
-
+```
 
 
 Now Edit the text CRUSH map
 
 FROM (old):
-
+```
 # begin crush map
 tunable choose_local_tries 0
 tunable choose_local_fallback_tries 0
@@ -692,14 +706,18 @@ host cephnode2 {
     hash 0    # rjenkins1
     item osd.1 weight 0.110
 }
-root default {
-    id -1        # do not change unnecessarily
-    # weight 0.220
-    alg straw
-    hash 0    # rjenkins1
-    item cephnode1 weight 0.110
-    item cephnode2 weight 0.110
-}
+```
+```diff
+- root default {
+-    id -1        # do not change unnecessarily
+-    # weight 0.220
+-    alg straw
+-    hash 0    # rjenkins1
+-    item cephnode1 weight 0.110
+-    item cephnode2 weight 0.110
+-}
+```
+```
 host cephnode3 {
     id -4        # do not change unnecessarily
     # weight 0.110
@@ -720,9 +738,11 @@ rule replicated_ruleset {
 }
 
 # end crush map
+```
  Section in RED does not look quite right...fix it!!!
 
 TO (new):
+```
 # begin crush map
 tunable choose_local_tries 0
 tunable choose_local_fallback_tries 0
@@ -770,15 +790,19 @@ host cephnode3 {
     hash 0    # rjenkins1
     item osd.2 weight 0.110
 }
-root default {
-    id -1        # do not change unnecessarily
-    # weight 0.330
-    alg straw
-    hash 0    # rjenkins1
-    item cephnode1 weight 0.110
-    item cephnode2 weight 0.110
-    item cephnode3 weight 0.110
-}
+```
+```diff
++ root default {
++    id -1        # do not change unnecessarily
++    # weight 0.330
++    alg straw
++    hash 0    # rjenkins1
++    item cephnode1 weight 0.110
++    item cephnode2 weight 0.110
++    item cephnode3 weight 0.110
++}
+```
+```
 # rules
 rule replicated_ruleset {
     ruleset 0
@@ -791,7 +815,7 @@ rule replicated_ruleset {
 }
 
 # end crush map
-
+```
 The fixed section in GREEN
 
 Compile the new CRUSH map:
